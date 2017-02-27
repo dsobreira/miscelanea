@@ -29,6 +29,7 @@ class aItemx
 	data nxForma
 	data nxPagin
 	data nxprctb
+	data deleta
 	
 	method new(aItemx) constructor 
 endclass
@@ -82,7 +83,7 @@ Metodo construtor
 /*/
 method new(axItens) class aItemx
 
-	Default axItens:={"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0}
+	Default axItens:={"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0,"false"}
 	
 	::Filial	:= xFilial("ADJ")
 	::cHistor	:= axItens[01]
@@ -103,6 +104,7 @@ method new(axItens) class aItemx
 	::nxForma	:= axItens[15]
 	::nxPagin	:= axItens[16]
 	::nxprctb	:= axItens[18]
+	::deleta	:= axItens[19]
 
 return self
 
@@ -133,7 +135,7 @@ method new(cNrOpor,cRevisa,lIsList) class AD1Oportun
 	Local cDtini := ""
 	Local nMoeda := 1
 	Local nCont	 := 0
-	Local aItens := {}	// {"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0}
+	Local aItens := {}						// {"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0,"false"}
 
 	default cNrOpor	:= GetNrOpor()			//GetCodSU5(GetSxeNum("AD1","AD1_NROPOR"))
 	default lIsList	:= .F.
@@ -164,6 +166,7 @@ method new(cNrOpor,cRevisa,lIsList) class AD1Oportun
 		cTextoM	:= AllTrim(AD1->AD1_XNOTA)
 		cProspe := AD1->AD1_PROSPE
 		cLojPro := AD1->AD1_LOJPRO
+		cRevisa	:= AD1->AD1_REVISA
 	Else
 		conout("Nao Encontrou, AD1 ....")
 	EndIf
@@ -187,7 +190,7 @@ method new(cNrOpor,cRevisa,lIsList) class AD1Oportun
 		::cCodCli	:= cCod
 		::cLojCli	:= cLoja
 		::TextoM	:= cTextoM
-		::aItens	:= oItem		//{"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0}
+		::aItens	:= oItem		//{"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0,"false"}
 //		::cData		:= date()
 //		::cHora		:= ""
 //		::nMoeda	:= nMoeda
@@ -209,10 +212,11 @@ method setProperties(cNrOpor,cRevisa,lIsList) class AD1Oportun
 Local cQryItem	:= ""
 Local aItem		:= {}
 Local nFaz		:= 0
+Local cRevisaSeek:=StrZero((Val(cRevisa)+1),2)
 
 	DbSelectArea("AD1")
 	AD1->(dbsetorder(1))
-	if AD1->(dbseek(xFilial("AD1") + cNrOpor + cRevisa ))
+	if AD1->(dbseek(xFilial("AD1") + cNrOpor + cRevisaSeek ))
 		::filial	:= xFilial("AD1")
 		::cNrOpor	:= AD1->AD1_NROPOR
 		::cRevisa	:= AD1->AD1_REVISA	
@@ -456,8 +460,8 @@ Else
 	cStage := oOport:cStage
 EndIf
 
-// vendedor antigo
-aVended	:= GetVended(__cUserId)		//CUSERNAME -->> Administrador codigo _cUesrID="000000"
+// vendedor antigo obtido pelo usuario
+aVended	:= GetVended(__cUserId)			//CUSERNAME -->> Administrador codigo _cUesrID="000000"
 
 dbSelectArea("AD1")
 dbSetOrder(1)
@@ -497,8 +501,6 @@ aCabec:=  {;
 			{ "AD1_STATUS"	, "1"			, NIL };
 		  } 
 Else 
-// !dbSeek(xFilial("AD1")+cNrOpor) //.and. cRevisa="01"
-
 	//	Inclusão/Alteração-Revisão 
 	Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 	conout('Teste de Inclusão PASSANDO o Numero de Oportunidade')
@@ -590,12 +592,10 @@ EndIf
 //Gravacao da oportunidade
 //****************************
 If lTodosSim
-
 	If cRevisa='01'
 		MSExecAuto({|x,y|FATA300(x,y)},3,aCabec,aAD2,aAD3,aAD4,aAD9,aADJ)
 	Else
 		MSExecAuto({|x,y|FATA300(x,y)},4,aCabec)	// era efetuado a alteração, agora é uma nova inclusão com nova revisão
-//		MSExecAuto({|x,y|FATA300(x,y)},3,aCabec,aAD2,aAD3,aAD4,aAD9,aADJ)
 	EndIf
 
  	If lMsErroAuto
@@ -708,7 +708,8 @@ Default cUserLog="000000"
 DbSelectArea("SA3")
 DbSetOrder(7)
 If !DbSeek(xFilial()+cUserLog)	// .or. cUserLog='000000'
-	//usuario nao cadastrado como vendedor ou ñ autorizado qdo Admin cUserLog='000000'
+	//usuario nao cadastrado como vendedor 
+	//ou ñ autorizado qdo Admin cUserLog='000000'
 	aadd(aVend,"XXXXXX")
 	aadd(aVend,"NOME VENEDEDOR")
 Else
@@ -726,7 +727,7 @@ return aVend
 //***********************
 User Function ItemOport(cNrOpor)
 	
-Local aItens:= {"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0}
+Local aItens:= {"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0,"false"}
 Local aItem := {}
 Local aXItem:= {}
 Local aRet	:= {}
@@ -736,6 +737,10 @@ Local oItens
 
 Default aItem  := {}
 Default cNrOpor:= "000000"
+
+Conout("&&-- ItemOpor(ItemOport) --&&")	
+Conout(cNrOpor)	
+Conout("&&-- ItemOpor(ItemOport) --&&")	
 	
 If cNrOpor<>"000000"
 	DbSelectArea("ADJ")
@@ -761,14 +766,11 @@ If cNrOpor<>"000000"
 			aItens[16]:= ADJ->ADJ_xPagin
 			aItens[17]:= ADJ->ADJ_XFILFA
 			aItens[18]:= ADJ->ADJ_XPRCTB
-
+			
 			ADJ->(DbSkip())
 			
 			aadd(aItem,aitens)
-			aItens:={"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0}
-/*			Conout("**** QTDE ITEM no Array de Retorno aItem funcao ItemOport ****************")
-			Conout(Len(aItem))
-			Conout("**************************************************************************")	*/
+			aItens:={"","","","","",0,"","",0,0,0,0,0,0,0,0,"",0,"false"}
 		End
 	Else
 		//	"oportunidade inexistente" 
@@ -809,6 +811,7 @@ Local cStage	:= ""
 Local dtini		:= "01/01/2017"
 Local nValor 	:= 0
 Local nFaz		:= 0
+Local cDeleta	:= "false"
 
 Default lPortal	:= .F.
 Default oOport	:= nil
@@ -816,20 +819,19 @@ Default oOport	:= nil
 If !lPortal
 	cDesc := "TESTE DE ROT AUTOMATICA "
 EndIf
-//Else
-	cNrOpor:= oOport:cNropor
-	cRevisa:= posicione("AD1",1,xfilial("AD1")+cNrOpor,"AD1_REVISA")					//	oOport:cRevisa
 
-	Conout('___________________________________________________')
-	Conout('Revisao na BD:')
-	Conout(cRevisa)
-	Conout('___________________________________________________')
-	
-	cDesc  := oOport:cDescri
-	dtini  := oOport:dtini
-	cTextoM:= oOport:textoM
-	cStage := oOport:cStage
-//EndIf
+cNrOpor:= oOport:cNropor
+cRevisa:= posicione("AD1",1,xfilial("AD1")+cNrOpor,"AD1_REVISA")	//	oOport:cRevisa
+
+Conout('___________________________________________________')
+Conout('Revisao na BD:')
+Conout(cRevisa)
+Conout('___________________________________________________')
+
+cDesc  := oOport:cDescri
+dtini  := oOport:dtini
+cTextoM:= oOport:textoM
+cStage := oOport:cStage
 
 aVended	:= GetVended(__cUserId)
 
@@ -860,33 +862,39 @@ If lTodosSim
 //			AD1->AD1_DTINI	:= dtini
 			AD1->(MsUnlock())
 			
-//			If Len(oOport:aitens[1]:cproduto)>0
-				dbSelectArea("ADJ")
-				dbSetOrder(1)		//ADJ_FILIAL+ADJ_NROPOR+ADJ_REVISA+ADJ_PROD
-			
-				Conout('___________________________________________________')
-				Conout('Qtde de itens:')
-				Conout(Len(oOport:aitens))
-				Conout('___________________________________________________')
-				For nFaz:=1 to Len(oOport:aitens)
-					cProdut:= AllTrim(oOport:aitens[nFaz]:cproduto)
+			dbSelectArea("ADJ")
+			dbSetOrder(1)				//ADJ_FILIAL+ADJ_NROPOR+ADJ_REVISA+ADJ_PROD
+		
+			Conout('___________________________________________________')
+			Conout('Qtde de itens:')
+			Conout(Len(oOport:aitens))
+			Conout('___________________________________________________')
+			For nFaz:=1 to Len(oOport:aitens)
+				cProdut:= AllTrim(oOport:aitens[nFaz]:cproduto)
 
-					//	Alteração/Revisão 
-					Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-					conout('Teste de ALTERACAO.............. PASSANDO o Numero de Oportunidade')
-					conout('NOVA FUNCAO PARA ALTERACAO       !!!')
-					Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-					Conout('cNrOport:')
-					conout(cNrOpor)
-					Conout('cRevisa:')
-					conout(cRevisa)
-					Conout('cProdut:')
-					conout(cProdut)
-					Conout('xFilfa:')
-					conout(oOport:aitens[nFaz]:cxFilfa)
-					Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+				//	Alteração/Revisão 
+				Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+				conout('Teste de ALTERACAO.............. PASSANDO o Numero de Oportunidade')
+				conout('NOVA FUNCAO PARA ALTERACAO       !!!')
+				Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+				Conout('cNrOport:')
+				conout(cNrOpor)
+				Conout('cRevisa:')
+				conout(cRevisa)
+				Conout('cProdut:')
+				conout(cProdut)
+				Conout('xFilfa:')
+				conout(oOport:aitens[nFaz]:cxFilfa)
+				Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
-					If ADJ->(dbseek(xFilial("ADJ")+cNropor+cRevisa+cProdut))
+				If ADJ->(dbseek(xFilial("ADJ")+cNropor+cRevisa+cProdut))
+					cDeleta:= oOport:aitens[nFaz]:deleta
+					If cDeleta="true"
+//							Deleção de Item durante a Alteração
+							Reclock("ADJ",.F.)
+							ADJ->(DbDelete())
+							ADJ->(MsUnlock())
+					Else
 						If ADJ->ADJ_NROPOR = cNropor .and. ADJ->ADJ_REVISA=cRevisa .and. ADJ->ADJ_PROD=cProdut 
 							Reclock("ADJ",.F.)
 							ADJ->ADJ_REVISA	:= cRevisaNew						//oOport:aitens[nFaz]:crevisa
@@ -907,8 +915,31 @@ If lTodosSim
 							ADJ->(MsUnlock())
 						EndIf
 					EndIf
-				Next nFaz
-		//	EndIf
+				Else
+//					Inclusão de Item durante a Alteração
+					Reclock("ADJ",.T.)
+					ADJ->ADJ_FILIAL	:= xFilial()					//oOport:aitens[nFaz]:filial
+					ADJ->ADJ_ITEM	:= oOport:aitens[nFaz]:citem
+					ADJ->ADJ_NROPOR	:= cNrOpor						//oOport:aitens[nFaz]:cnropor
+					ADJ->ADJ_REVISA	:= cRevisaNew					//oOport:aitens[nFaz]:crevisa
+					ADJ->ADJ_PROD	:= oOport:aitens[nFaz]:cproduto
+					ADJ->ADJ_XTABPR	:= oOport:aitens[nFaz]:cxtabpr	
+					ADJ->ADJ_QUANT	:= oOport:aitens[nFaz]:nquant
+					ADJ->ADJ_PRUNIT	:= oOport:aitens[nFaz]:nprunit
+					ADJ->ADJ_VALOR	:= oOport:aitens[nFaz]:nvalor
+					ADJ->ADJ_XPRCVE	:= oOport:aitens[nFaz]:cxprcve	
+					ADJ->ADJ_XFILFA	:= oOport:aitens[nFaz]:cxfilfa
+					ADJ->ADJ_XPRFAT	:= oOport:aitens[nFaz]:cxprfat	
+					ADJ->ADJ_HISTOR	:= oOport:aitens[nFaz]:chistor
+					ADJ->ADJ_XDESCO := oOport:aitens[nFaz]:nxdesco
+					ADJ->ADJ_XCOL	:= oOport:aitens[nFaz]:nxcolun
+					ADJ->ADJ_XALT	:= oOport:aitens[nFaz]:nxaltur
+					ADJ->ADJ_XFORMA := oOport:aitens[nFaz]:nxforma
+					ADJ->ADJ_XPAGIN := oOport:aitens[nFaz]:nxpagin
+					ADJ->ADJ_XPRCTB := oOport:aitens[nFaz]:nxprctb
+					MsUnlock()
+				EndIf
+			Next nFaz
 		EndIf
 	EndIf
 EndIf
