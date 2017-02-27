@@ -738,9 +738,9 @@ Local oItens
 Default aItem  := {}
 Default cNrOpor:= "000000"
 
-Conout("&&-- ItemOpor(ItemOport) --&&")	
-Conout(cNrOpor)	
-Conout("&&-- ItemOpor(ItemOport) --&&")	
+//Conout("&&-- ItemOpor(ItemOport) --&&")	
+//Conout(cNrOpor)	
+//Conout("&&-- ItemOpor(ItemOport) --&&")	
 	
 If cNrOpor<>"000000"
 	DbSelectArea("ADJ")
@@ -812,6 +812,7 @@ Local dtini		:= "01/01/2017"
 Local nValor 	:= 0
 Local nFaz		:= 0
 Local cDeleta	:= "false"
+Local lDeleta	:= .F.
 
 Default lPortal	:= .F.
 Default oOport	:= nil
@@ -874,7 +875,7 @@ If lTodosSim
 
 				//	Alteração/Revisão 
 				Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-				conout('Teste de ALTERACAO.............. PASSANDO o Numero de Oportunidade')
+				conout('Teste de ALTERACAO.............. PASSANDO o Numero de Oportunidade á')
 				conout('NOVA FUNCAO PARA ALTERACAO       !!!')
 				Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 				Conout('cNrOport:')
@@ -888,8 +889,20 @@ If lTodosSim
 				Conout('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
 				If ADJ->(dbseek(xFilial("ADJ")+cNropor+cRevisa+cProdut))
+					
 					cDeleta:= oOport:aitens[nFaz]:deleta
-					If cDeleta="true"
+					
+					If ValType(cDeleta)="C"
+						If Upper(Alltrim(cDeleta))="TRUE"
+							lDeleta:= .T.
+						Else
+							lDeleta:= .F.
+						EndIf
+					Else 
+						lDeleta:=cDeleta
+					EndIf
+					
+					If lDeleta			//cDeleta="true" 
 //							Deleção de Item durante a Alteração
 							Reclock("ADJ",.F.)
 							ADJ->(DbDelete())
